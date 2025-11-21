@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Книга Матери — FINAL v9</title>
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.css" />
+  <style>
+    body { margin: 0; background: #eaeaea; overflow: hidden; transition: background 0.6s ease, color 0.6s ease; }
+    #flipbook { width: 100vw; height: 100vh; opacity: 0; transition: opacity 1.2s ease; }
+    body.loaded #flipbook { opacity: 1; }
+
+    #page-counter {
+      position: fixed; bottom: 10px; right: 20px;
+      background: rgba(255,255,255,0.85);
+      padding: 6px 14px; border-radius: 8px;
+      font-family: sans-serif; font-size: 15px;
+      z-index: 10; transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    #home-btn, #add-bookmark, #open-bookmarks, #theme-toggle {
+      position: fixed; z-index: 10; padding: 6px 12px;
+      background: #222; color: white; border: none;
+      border-radius: 6px; font-family: sans-serif;
+      cursor: pointer; font-size: 14px;
+      transition: background 0.3s ease;
+    }
+    #home-btn:hover, #add-bookmark:hover, #open-bookmarks:hover, #theme-toggle:hover { background: #444; }
+
+    #home-btn { top: 10px; right: 20px; }
+    #add-bookmark { top: 50px; right: 20px; }
+    #open-bookmarks { top: 90px; right: 20px; }
+    #theme-toggle { top: 130px; right: 20px; }
+
+    #bookmark-list {
+      position: fixed; right: 20px; top: 170px;
+      background: rgba(255,255,255,0.95);
+      padding: 10px; border-radius: 8px;
+      font-family: sans-serif; font-size: 14px;
+      width: 180px; max-height: 50vh; overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    #bookmark-list.hidden { display: none; }
+    .mark { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .mark button { font-size: 12px; padding: 3px 6px; border-radius: 4px; border: none; cursor: pointer; }
+
+    #bookmark-animation {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.7);
+      width: 120px; opacity: 0; transition: all 0.6s ease;
+      z-index: 50;
+    }
+    #bookmark-animation.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+    /* Тёмная тема */
+    body.dark-mode { background: #111; color: #eee; }
+    body.dark-mode #page-counter { background: rgba(20,20,20,0.85); color: #fff; }
+    body.dark-mode #home-btn,
+    body.dark-mode #add-bookmark,
+    body.dark-mode #open-bookmarks,
+    body.dark-mode #theme-toggle {
+      background: #333; color: #ddd;
+    }
+
+    @media (max-width: 768px) {
+      #home-btn, #add-bookmark, #open-bookmarks, #theme-toggle {
+        right: 10px; font-size: 13px; padding: 5px 10px;
+      }
+      #bookmark-list { right: 10px; width: 160px; }
+    }
+
+    /* Подсветка обложки */
+    #flipbook img:first-child:hover {
+      box-shadow: 0 0 25px rgba(255, 255, 200, 0.5);
+      transition: 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="flipbook"></div>
+  <div id="page-counter">Загрузка...</div>
+  <button id="home-btn">🏠 Обложка</button>
+  <button id="add-bookmark">🔖 Добавить закладку</button>
+  <button id="open-bookmarks">📚 Мои закладки</button>
+  <button id="theme-toggle">🌙 Тема</button>
+  <div id="bookmark-list" class="hidden"></div>
+  <img id="bookmark-animation" src="" alt="Закладка" />
+
+  <script>
+    const flipbook = new St.PageFlip(document.getElementById("flipbook"), {
+      width: 595, height: 842, size: "stretch",
+      minWidth: 315, minHeight: 420, maxWidth: 2000, maxHeight: 2000,
+      showCover: true, useMouseEvents: true, startPage: 0,
+      flippingTime: 1000, maxShadowOpacity: 0.5, mobileScrollSupport: false
+    });
+
+    // список страниц (page_00 — обложка + page_01 … page_149)
+const images = [];
+for (let i = 0; i <= 149; i++) {
+  const num = i.toString().padStart(2, '0');
+  images.push(`pages/page_${num}.jpg`);
+}
+flipbook.loadFromImages(images);
+
+    // плавное появление книги
+    window.addEventListener('load', () => {
+      document.body.classList.add('loaded');
+      const savedPage = localStorage.getItem('lastPage');
+      if (savedPage) flipbook.turnToPage(parseInt(savedPage));
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.getElementById("theme-toggle").textContent = "☀️ Тема";
+        document.getElementById("flipbook").style.filter = "brightness(0.8)";
+      }
+    });
+
+    flipbook.on('flip', () => {
+      const current = flipbook.getCurrentPageIndex() + 1;
+      document.getElementById('page-counter').innerText = `Страница ${current} / ${flipbook.getPageCount()}`;
+      localStorage.setItem('lastPage', flipbook.getCurrentPageIndex());
+      if (current === flipbook.getPageCount()) {
+        setTimeout(() => alert('Поздравляем! Вы прочли книгу до конца 🌷'), 500);
+      }
+    });
+
+    document.getElementById('home-btn').addEventListener('click', () => flipbook.turnToPage(0));
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') flipbook.flipNext();
+      if (e.key === 'ArrowLeft') flipbook.flipPrev();
+    });
+
+    // перелистывание колесиком
+    window.addEventListener('wheel', e => {
+      if (e.deltaY > 0) flipbook.flipNext();
+      else if (e.deltaY < 0) flipbook.flipPrev();
+    });
+
+    // --- Закладки ---
+    let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+    function saveBookmarks() { localStorage.setItem('bookmarks', JSON.stringify(bookmarks)); }
+
+    function updateBookmarkList() {
+      const listDiv = document.getElementById('bookmark-list');
+      if (bookmarks.length === 0) {
+        listDiv.innerHTML = '<div id="no-bookmarks">Нет закладок</div>';
+        setTimeout(() => { listDiv.classList.add('hidden'); }, 1500);
+        return;
+      }
+      listDiv.innerHTML = bookmarks.map((p, i) => `
+        <div class='mark'>
+          <span>Стр. ${p + 1}</span>
+          <button onclick='goToBookmark(${p})'>Перейти</button>
+          <button onclick='deleteBookmark(${i})'>🗙</button>
+        </div>`).join('');
+    }
+
+    function addBookmark() {
+      const page = flipbook.getCurrentPageIndex();
+      if (!bookmarks.includes(page)) {
+        bookmarks.push(page);
+        saveBookmarks(); updateBookmarkList(); showBookmarkAnimation();
+      }
+    }
+
+    // Умное анимированное перелистывание при переходе к закладке
+    function goToBookmark(page) {
+      const current = flipbook.getCurrentPageIndex();
+      if (page === current) return;
+
+      const direction = page > current ? 1 : -1;
+      let flipping = true;
+
+      const handler = () => {
+        const idx = flipbook.getCurrentPageIndex();
+        if ((direction > 0 && idx >= page) || (direction < 0 && idx <= page)) {
+          flipping = false;
+          flipbook.off('flip', handler);
+        }
+      };
+
+      flipbook.on('flip', handler);
+
+      async function animateFlip() {
+        while (flipping) {
+          if (direction > 0) flipbook.flipNext();
+          else flipbook.flipPrev();
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+      }
+
+      animateFlip();
+    }
+
+    function deleteBookmark(index) {
+      bookmarks.splice(index, 1); saveBookmarks(); updateBookmarkList();
+    }
+
+    document.getElementById('add-bookmark').addEventListener('click', addBookmark);
+    document.getElementById('open-bookmarks').addEventListener('click', () => {
+      const list = document.getElementById('bookmark-list');
+      list.classList.toggle('hidden'); updateBookmarkList();
+    });
+
+    // анимация закладки
+    function showBookmarkAnimation() {
+      const anim = document.getElementById('bookmark-animation');
+      const random = Math.floor(Math.random() * 3) + 1;
+      anim.src = `bookmark${random}.png`;
+      anim.classList.add('visible');
+      setTimeout(() => anim.classList.remove('visible'), 1000);
+    }
+
+    // переключение темы
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const mode = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+      localStorage.setItem('theme', mode);
+      themeBtn.textContent = mode === 'dark' ? '☀️ Тема' : '🌙 Тема';
+      document.getElementById("flipbook").style.filter = mode === "dark" ? "brightness(0.8)" : "brightness(1)";
+    });
+  </script>
+</body>
+</html>
